@@ -1,1 +1,0 @@
-select * from faqs order by id
