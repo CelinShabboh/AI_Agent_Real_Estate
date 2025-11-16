@@ -17,7 +17,7 @@ app = FastAPI(title="Real Estate Assistant")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://syrialistings.com:5174"],  
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -87,3 +87,4 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
