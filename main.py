@@ -72,13 +72,28 @@ def find_relevant_answer(question: str, db: Session):
 
     all_entries = {f.id: f.question for f in faqs}
 
-    best_match_id = max(all_entries, key=lambda id:
-                        difflib.SequenceMatcher(None, question, all_entries[id]).ratio())
+    best_match_id = max(
+        all_entries,
+        key=lambda id: difflib.SequenceMatcher(None, question, all_entries[id]).ratio()
+    )
 
     similarity = difflib.SequenceMatcher(
-        None, question, all_entries[best_match_id]).ratio()
+        None, question, all_entries[best_match_id]
+    ).ratio()
 
-    if similarity < 0.5:
+    # ----------------------------
+    # فلترة الأسئلة غير العقارية
+    # ----------------------------
+    real_estate_keywords = [
+        "عقار", "عقارات", "بيت", "منزل", "ارض", "أرض",
+        "سعر", "أسعار", "بيع", "شراء", "إيجار", "ايجار",
+        "مكتب", "شقة", "شقق", "مخطط", "عرض", "مباع"
+    ]
+
+    if not any(keyword in question for keyword in real_estate_keywords):
+        return None
+
+    if similarity < 0.80:
         return None
 
     return db.query(FAQ).filter(FAQ.id == best_match_id).first().answer
@@ -171,7 +186,7 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
             db.commit()
 
             return {
-                "answer": "لا يوجد جواب حاليًا لهذا السؤال. الرجاء التواصل مع فريق الدعم.",
+                "answer": "لا يوجد جواب حاليًا لهذا السؤال. الرجاء التواصل مع فريق الدعم على الرقم 09999999",
                 "conversation_id": conv.id
             }
 
@@ -205,5 +220,6 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
