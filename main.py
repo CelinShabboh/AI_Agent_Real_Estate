@@ -116,7 +116,7 @@ def get_conversation_messages(conv_id: int, db: Session = Depends(get_db)):
     ).order_by(Message.created_at.asc()).all()
     
 
-@app.patch("/conversations/{conv_id}")
+@app.patch("/conversations/{conv_id}/rename")
 def rename_conversation(conv_id: int, data: ConversationRename, db: Session = Depends(get_db)):
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     if not conv:
@@ -128,7 +128,7 @@ def rename_conversation(conv_id: int, data: ConversationRename, db: Session = De
     return {"status": "updated"}
     
 
-@app.delete("/conversations/{conv_id}")
+@app.delete("/conversations/{conv_id}/delete")
 def delete_conversation(conv_id: int, db: Session = Depends(get_db)):
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     if not conv:
@@ -203,4 +203,5 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
