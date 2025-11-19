@@ -81,9 +81,7 @@ def find_relevant_answer(question: str, db: Session):
         None, question, all_entries[best_match_id]
     ).ratio()
 
-    # ----------------------------
     # فلترة الأسئلة غير العقارية
-    # ----------------------------
     real_estate_keywords = [
         "عقار", "عقارات", "بيت", "منزل", "ارض", "أرض",
         "سعر", "أسعار", "بيع", "شراء", "إيجار", "ايجار",
@@ -111,14 +109,12 @@ def create_conversation_from_first_message(db: Session, first_text: str) -> Conv
 # Routes
 # ------------------------------
 
-# List all conversations
 @app.get("/conversations/", response_model=List[ConversationOut])
 def list_conversations(db: Session = Depends(get_db)):
     rows = db.query(Conversation).order_by(Conversation.updated_at.desc()).all()
     return rows
 
 
-# List messages in 1 conversation
 @app.get("/conversations/{conv_id}/messages", response_model=List[MessageOut])
 def get_conversation_messages(conv_id: int, db: Session = Depends(get_db)):
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
@@ -128,7 +124,7 @@ def get_conversation_messages(conv_id: int, db: Session = Depends(get_db)):
     return db.query(Message).filter(
         Message.conversation_id == conv_id
     ).order_by(Message.created_at.asc()).all()
-    
+
 
 @app.patch("/conversations/{conv_id}/rename")
 def rename_conversation(conv_id: int, data: ConversationRename, db: Session = Depends(get_db)):
@@ -140,7 +136,7 @@ def rename_conversation(conv_id: int, data: ConversationRename, db: Session = De
     conv.updated_at = datetime.utcnow()
     db.commit()
     return {"status": "updated"}
-    
+
 
 @app.delete("/conversations/{conv_id}/delete")
 def delete_conversation(conv_id: int, db: Session = Depends(get_db)):
@@ -153,55 +149,52 @@ def delete_conversation(conv_id: int, db: Session = Depends(get_db)):
     return {"status": "deleted"}
 
 
-
-# MAIN endpoint
+# ------------------------------
+# MAIN /ask/ logic
+# ------------------------------
 @app.post("/ask/")
 async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
     try:
-        # 1. conversation exist? 
+        # 1) conversation handling
         conv = None
-        
+
         if q.conversation_id is not None:
             conv = db.query(Conversation).filter(Conversation.id == q.conversation_id).first()
 
-        if q.conversation_id is not None and not conv:
-            raise HTTPException(status_code=400, detail="Conversation does not exist anymore")
+            if not conv:
+                raise HTTPException(status_code=400, detail="Conversation does not exist anymore")
 
         if conv is None:
             conv = create_conversation_from_first_message(db, q.question)
 
-        # 2. Save USER message
+        # 2) Save USER message
         user_msg = Message(conversation_id=conv.id, role="user", text=q.question)
         db.add(user_msg)
         db.commit()
 
-        # 3. check FAQ answer
+        # 3) Try to find FAQ answer
         relevant_answer = find_relevant_answer(q.question, db)
 
+        # إذا ما في جواب ⇒ fallback مباشرة
         if not relevant_answer:
-    # Save to unanswered table
-    new_q = UnansweredQuestion(question=q.question)
-    db.add(new_q)
+            new_q = UnansweredQuestion(question=q.question)
+            db.add(new_q)
 
-    fallback_answer = "لا يوجد جواب حاليًا لهذا السؤال. الرجاء التواصل مع فريق الدعم على الرقم 09999999"
+            fallback_answer = "لا يوجد جواب حاليًا لهذا السؤال. الرجاء التواصل مع فريق الدعم على الرقم 09999999"
 
-    # Save assistant message (IMPORTANT FIX)
-    ass_msg = Message(
-        conversation_id=conv.id,
-        role="assistant",
-        text=fallback_answer
-    )
-    db.add(ass_msg)
+            ass_msg = Message(
+                conversation_id=conv.id,
+                role="assistant",
+                text=fallback_answer
+            )
+            db.add(ass_msg)
 
-    conv.updated_at = datetime.utcnow()
-    db.commit()
+            conv.updated_at = datetime.utcnow()
+            db.commit()
 
-    return {
-        "answer": fallback_answer,
-        "conversation_id": conv.id
-    }
+            return {"answer": fallback_answer, "conversation_id": conv.id}
 
-        # 4. Ask OpenAI
+        # 4) Otherwise → Use OpenAI to rewrite the FAQ answer
         prompt = f"""
 السؤال: {q.question}
 الإجابة التالية من قاعدة النظام العقاري:
@@ -209,6 +202,7 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 
 أعد صياغة الإجابة بشكل واضح ومباشر دون إضافة معلومات جديدة.
 """
+
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -220,7 +214,7 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 
         answer = response.choices[0].message.content.strip()
 
-        # 5. Save assistant message
+        # 5) Save assistant message
         ass_msg = Message(conversation_id=conv.id, role="assistant", text=answer)
         db.add(ass_msg)
 
@@ -231,7 +225,3 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
