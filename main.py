@@ -175,7 +175,6 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
         # 3) Try to find FAQ answer
         relevant_answer = find_relevant_answer(q.question, db)
 
-        # إذا ما في جواب ⇒ fallback مباشرة
         if not relevant_answer:
             new_q = UnansweredQuestion(question=q.question)
             db.add(new_q)
@@ -225,3 +224,4 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
