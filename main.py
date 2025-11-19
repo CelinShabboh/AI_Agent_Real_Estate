@@ -81,19 +81,7 @@ def find_relevant_answer(question: str, db: Session):
         None, question, all_entries[best_match_id]
     ).ratio()
 
-    # فلترة الأسئلة غير العقارية
-    real_estate_keywords = [
-        "عقار", "عقارات", "بيت", "منزل", "ارض", "أرض",
-        "سعر", "أسعار", "بيع", "شراء", "إيجار", "ايجار",
-        "مكتب", "شقة", "شقق", "مخطط", "عرض", "مباع",
-        "عقد", "عقود", "السوق"
-    ]
-
-    if not any(keyword in question for keyword in real_estate_keywords):
-      if similarity < 0.80:   
-        return None
-    else:
-      if similarity < 0.75:  
+    if similarity < 0.6:  
         return None
 
     return db.query(FAQ).filter(FAQ.id == best_match_id).first().answer
@@ -226,6 +214,7 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
