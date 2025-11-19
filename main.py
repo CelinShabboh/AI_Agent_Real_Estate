@@ -110,7 +110,6 @@ def get_conversation_messages(conv_id: int, db: Session = Depends(get_db)):
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    # رجّع الرسائل مرتبة من الأقدم للأحدث
     return db.query(Message).filter(
         Message.conversation_id == conv_id
     ).order_by(Message.created_at.asc()).all()
@@ -144,12 +143,16 @@ def delete_conversation(conv_id: int, db: Session = Depends(get_db)):
 @app.post("/ask/")
 async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
     try:
-        # 1. conversation exist? or create new one
+        # 1. conversation exist? 
         conv = None
-        if q.conversation_id:
+        
+        if q.conversation_id is not None:
             conv = db.query(Conversation).filter(Conversation.id == q.conversation_id).first()
 
-        if not conv:
+        if q.conversation_id is not None and not conv:
+            raise HTTPException(status_code=400, detail="Conversation does not exist anymore")
+
+        if conv is None:
             conv = create_conversation_from_first_message(db, q.question)
 
         # 2. Save USER message
@@ -160,7 +163,6 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
         # 3. check FAQ answer
         relevant_answer = find_relevant_answer(q.question, db)
 
-        # If no answer found — save unresolved
         if not relevant_answer:
             new_q = UnansweredQuestion(question=q.question)
             db.add(new_q)
@@ -169,11 +171,11 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
             db.commit()
 
             return {
-                "answer": "لا يوجد جواب حاليًا لهذا السؤال. الرجاء التواصل مع فريق الدعم على الرقم 0999999999.",
+                "answer": "لا يوجد جواب حاليًا لهذا السؤال. الرجاء التواصل مع فريق الدعم.",
                 "conversation_id": conv.id
             }
 
-        # 4. Ask OpenAI to rephrase
+        # 4. Ask OpenAI
         prompt = f"""
 السؤال: {q.question}
 الإجابة التالية من قاعدة النظام العقاري:
@@ -184,7 +186,7 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "أنت مساعد متخصص في النظام العقاري، تجيب فقط بناءً على النص المقدم"},
+                {"role": "system", "content": "أنت مساعد متخصص في النظام العقاري."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0,
