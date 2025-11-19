@@ -10,13 +10,21 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+is_local = "localhost" in DATABASE_URL or "127.0.0.1" in DATABASE_URL
+
 # Remote hosting needs SSL
-if "localhost" in DATABASE_URL or "127.0.0.1" in DATABASE_URL:
-    engine = create_engine(DATABASE_URL)
+if is_local:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_recycle=300,
+    )
 else:
     engine = create_engine(
         DATABASE_URL,
-        connect_args={"sslmode": "require"}
+        connect_args={"sslmode": "require"},
+        pool_pre_ping=True,
+        pool_recycle=300,
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -67,3 +75,4 @@ class Message(Base):
 
 # Create all tables if not exist
 Base.metadata.create_all(bind=engine)
+
