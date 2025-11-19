@@ -179,16 +179,27 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
         relevant_answer = find_relevant_answer(q.question, db)
 
         if not relevant_answer:
-            new_q = UnansweredQuestion(question=q.question)
-            db.add(new_q)
+    # Save to unanswered table
+    new_q = UnansweredQuestion(question=q.question)
+    db.add(new_q)
 
-            conv.updated_at = datetime.utcnow()
-            db.commit()
+    fallback_answer = "لا يوجد جواب حاليًا لهذا السؤال. الرجاء التواصل مع فريق الدعم على الرقم 09999999"
 
-            return {
-                "answer": "لا يوجد جواب حاليًا لهذا السؤال. الرجاء التواصل مع فريق الدعم على الرقم 09999999",
-                "conversation_id": conv.id
-            }
+    # Save assistant message (IMPORTANT FIX)
+    ass_msg = Message(
+        conversation_id=conv.id,
+        role="assistant",
+        text=fallback_answer
+    )
+    db.add(ass_msg)
+
+    conv.updated_at = datetime.utcnow()
+    db.commit()
+
+    return {
+        "answer": fallback_answer,
+        "conversation_id": conv.id
+    }
 
         # 4. Ask OpenAI
         prompt = f"""
@@ -220,6 +231,7 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
