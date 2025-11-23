@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
 from datetime import datetime
-
+from fastapi import Query
 from database import SessionLocal, FAQ, UnansweredQuestion, Conversation, Message
 
 # Load env
@@ -99,21 +99,68 @@ def create_conversation_from_first_message(db: Session, first_text: str) -> Conv
 # Routes
 # ------------------------------
 
-@app.get("/conversations/", response_model=List[ConversationOut])
-def list_conversations(db: Session = Depends(get_db)):
-    rows = db.query(Conversation).order_by(Conversation.updated_at.desc()).all()
-    return rows
+@app.get("/conversations/")
+def list_conversations(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+
+    offset = (page - 1) * limit
+
+    total = db.query(Conversation).count()
+
+    rows = (
+        db.query(Conversation)
+        .order_by(Conversation.updated_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    total_pages = (total + limit - 1) // limit
+
+    return {
+        "page": page,
+        "limit": limit,
+        "total": total,
+        "total_pages": total_pages,
+        "items": rows
+    }
 
 
-@app.get("/conversations/{conv_id}/messages", response_model=List[MessageOut])
-def get_conversation_messages(conv_id: int, db: Session = Depends(get_db)):
+@app.get("/conversations/{conv_id}/messages")
+def get_conversation_messages(
+    conv_id: int,
+    cursor: int | None = Query(None),
+    limit: int = Query(30, ge=5, le=100),
+    db: Session = Depends(get_db)
+):
+
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    return db.query(Message).filter(
-        Message.conversation_id == conv_id
-    ).order_by(Message.created_at.asc()).all()
+    query = db.query(Message).filter(Message.conversation_id == conv_id)
+
+    if cursor is None:
+        query = query.order_by(Message.id.desc()).limit(limit)
+    else:
+        query = (
+            query.filter(Message.id < cursor)
+            .order_by(Message.id.desc())
+            .limit(limit)
+        )
+
+    messages = query.all()
+
+    next_cursor = messages[-1].id if len(messages) > 0 else None
+
+    return {
+        "items": list(reversed(messages)), 
+        "next_cursor": next_cursor,
+        "has_more": next_cursor is not None
+    }
 
 
 @app.patch("/conversations/{conv_id}/rename")
@@ -214,6 +261,7 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
