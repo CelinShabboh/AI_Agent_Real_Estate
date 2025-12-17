@@ -75,4 +75,3 @@ class Message(Base):
 
 # Create all tables if not exist
 Base.metadata.create_all(bind=engine)
-
