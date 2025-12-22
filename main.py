@@ -227,6 +227,7 @@ def delete_conversation(conv_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "deleted"}
 
+
 @app.get("/unanswered/")
 def list_unanswered(
     page: int = Query(1, ge=1),
@@ -325,6 +326,30 @@ async def update_site_knowledge(knowledge_id: int, updated_data: KnowledgeCreate
 
     return {"message": "تم تحديث المعلومة بنجاح", "data": db_knowledge}
 
+
+@app.post("/knowledge/resolve-unanswered/{qid}")
+async def resolve_unanswered_question(
+    qid: int, 
+    data: KnowledgeCreate, 
+    db: Session = Depends(get_db)
+):
+    unanswered_item = db.query(UnansweredQuestion).filter(UnansweredQuestion.id == qid).first()
+    if not unanswered_item:
+        raise HTTPException(status_code=404, detail="السؤال غير موجود في قائمة غير المجابة")
+
+    new_entry = SiteKnowledge(
+        section_name=data.section_name,
+        content=data.content
+    )
+    db.add(new_entry)
+
+    db.delete(unanswered_item)
+    
+    db.commit()
+    db.refresh(new_entry)
+    
+    return {"message": "تم تحويل السؤال إلى معرفة بنجاح وحذفه من قائمة الانتظار"}
+
 # ------------------------------
 # MAIN /ask/ Logic
 # ------------------------------
@@ -376,11 +401,16 @@ async def ask_real_estate_agent(q: Question, db: Session = Depends(get_db)):
 7. تمييز جنس المستخدم من خلال رسائله والرد عليه حسب جنسه أنثى أو ذكر أو محايد
 """
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "system", "content": reasoning_prompt}],
-            temperature=0
+        try:
+          response = client.chat.completions.create(
+          model="gpt-4o-mini",
+          messages=[{"role": "system", "content": reasoning_prompt}],
+          temperature=0
         )
+        except Exception as e:
+         if "rate_limit_exceeded" in str(e).lower():
+            return {"answer": "عذراً، النظام مشغول حالياً بسبب كثرة الطلبات. يرجى المحاولة بعد 20 ثانية.", "conversation_id": conv.id}
+         raise HTTPException(status_code=500, detail="حدث خطأ في الاتصال بالذكاء الاصطناعي")
         ai_answer = response.choices[0].message.content.strip()
 
         if "NOT_FOUND" in ai_answer:
@@ -402,4 +432,3 @@ async def handle_unanswered(question, conv, db):
     db.add(ass_msg)
     db.commit()
     return {"answer": fallback, "conversation_id": conv.id}
-
