@@ -269,11 +269,32 @@ def delete_unanswered(qid: int, db: Session = Depends(get_db)):
 
 
 @app.get("/knowledge/")
+def list_knowledge(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    offset = (page - 1) * limit
 
-def list_knowledge(db: Session = Depends(get_db)):
+    total = db.query(SiteKnowledge).count()
 
-    return db.query(SiteKnowledge).all()
+    rows = (
+        db.query(SiteKnowledge)
+        .order_by(SiteKnowledge.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
 
+    total_pages = (total + limit - 1) // limit
+
+    return {
+        "page": page,
+        "limit": limit,
+        "total": total,
+        "total_pages": total_pages,
+        "items": rows
+    }
 
 
 @app.put("/knowledge/{knowledge_id}")
@@ -381,3 +402,4 @@ async def handle_unanswered(question, conv, db):
     db.add(ass_msg)
     db.commit()
     return {"answer": fallback, "conversation_id": conv.id}
+
