@@ -1,4 +1,3 @@
-# database.py
 from sqlalchemy import create_engine, Column, Integer, Text, String, ForeignKey, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -33,6 +32,15 @@ Base = declarative_base()
 # --------------------------
 # Tables
 # --------------------------
+
+class SiteKnowledge(Base):
+    __tablename__ = "site_knowledge"
+    id = Column(Integer, primary_key=True, index=True)
+    section_name = Column(String(255), nullable=False)  # مثال: "واجهة الرئيسية للوسيط" أو "إرشادات العقود"
+    content = Column(Text, nullable=False)              # الشرح التفصيلي الذي كتبناه بناءً على الصور
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
 class FAQ(Base):
     __tablename__ = "faqs"
