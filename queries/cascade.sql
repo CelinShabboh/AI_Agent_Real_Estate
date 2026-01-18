@@ -1,0 +1,1 @@
+TRUNCATE TABLE conversations, messages RESTART IDENTITY CASCADE;
