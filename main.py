@@ -6,7 +6,7 @@ app = FastAPI(title="Real Estate Assistant API v2")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["http://syrianlistings.com:5174"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

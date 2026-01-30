@@ -37,3 +37,6 @@ class DocumentOut(BaseModel):
     file_name: str
     created_at: datetime
     class Config: orm_mode = True
+
+class MessageUpdate(BaseModel):
+    text: str

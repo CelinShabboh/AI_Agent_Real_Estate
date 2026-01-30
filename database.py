@@ -90,6 +90,8 @@ class DocumentKnowledge(Base):
     file_name = Column(String(255))
     content = Column(Text) 
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=True)
 
 
 Base.metadata.create_all(bind=engine)
