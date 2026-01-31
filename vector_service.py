@@ -1,3 +1,4 @@
+import uuid
 import chromadb
 from chromadb.utils import embedding_functions
 import os
@@ -15,15 +16,13 @@ docs_collection = client.get_or_create_collection(name="user_documents", embeddi
 
 def add_to_vector_db(text: str, metadata: dict, collection_type="docs"):
     collection = docs_collection if collection_type == "docs" else site_collection
-    
+
     chunks = [text[i:i+500] for i in range(0, len(text), 500)]
-    
-    ids = [f"{metadata['file_name']}_{i}" for i in range(len(chunks))]
-    metadatas = [metadata for _ in range(len(chunks))]
-    
+    ids = [str(uuid.uuid4()) for _ in chunks]
+
     collection.add(
         documents=chunks,
-        metadatas=metadatas,
+        metadatas=[metadata for _ in chunks],
         ids=ids
     )
 
