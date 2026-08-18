@@ -1,1 +1,1 @@
-A real estate project in Homs Governorate
+**Homs University Real Estate Platform** is an AI-powered platform that enables users to buy, sell, and browse properties with full descriptions, photos, prices, and contact details. It features intelligent valuation models that predict current, historical, and future property prices (at 6, 12, and 24 months) alongside real-time market state reports. Additionally, it integrates a dedicated AI chatbot to deliver instant market analytics and answer platform-related inquiries.
