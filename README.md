@@ -1,1 +1,18 @@
-**Homs University Real Estate Platform** is an AI-powered platform that enables users to buy, sell, and browse properties with full descriptions, photos, prices, and contact details. It features intelligent valuation models that predict current, historical, and future property prices (at 6, 12, and 24 months) alongside real-time market state reports. Additionally, it integrates a dedicated AI chatbot to deliver instant market analytics and answer platform-related inquiries.
+# 🏢 مشروع AI Agent Real Estat
+
+مشروع برمجية ذكي يهدف إلى تسهيل واستكشاف العروض العقارية في محيط جامعة حمص باستخدام تقنيات الذكاء الاصطناعي مع تقديم محرك بحث ذكي وتوقعات دقيقة للأسعار.
+
+---
+
+## 🌟 المزايا والخصائص الرئيسية (Features)
+* **البحث الذكي (Vector Search):** استخدام الـ Embeddings ومركّب ChromaDB للبحث السريع في الخصائص والعقارات المتاحة بناءً على الوصف النصي.
+* **إدارة قاعدة البيانات (CRUD Operations):** إمكانية إضافة، تعديل، حذف، واستعلام البيانات الخاصة بالعقارات والمستخدمين بسلاسة.
+* **الربط مع AI Agent:** إمكانية الرد التلقائي والإجابة على استفسارات المستخدمين حول سوق العقارات.
+* **واجهة برمجة التطبيقات (FastAPI Routes):** تقسيم برمدي منظم باستخدام الـ Routers لتسهيل توسيع وتطوير المشروع مستقبلاً.
+
+---
+
+## 🛠️ كيفية التشغيل والاستخدام (How to Run)
+1. **تثبيت المكتبات والاعتماديات:**
+   ```bash
+   pip install -r requirements.txt
